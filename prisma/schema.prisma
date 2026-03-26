@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum CallProcessingStatus {
+  NEW
+  QUEUED
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum MetricsScope {
+  TEAM
+  MANAGER
+}
+
+enum InsightScope {
+  TEAM
+  MANAGER
+}
+
+enum InsightType {
+  RISK
+  OPPORTUNITY
+  COACH
+  ANOMALY
+}
+
+model User {
+  id                       String    @id @default(uuid())
+  email                    String    @unique
+  passwordHash             String
+  passwordResetTokenHash   String?
+  passwordResetExpiresAt   DateTime?
+  name                     String
+  role                     UserRole  @default(USER)
+  managerId                String?   @unique
+  manager                  Manager?  @relation(fields: [managerId], references: [id])
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+}
+
+model Manager {
+  id          String   @id @default(uuid())
+  name        String
+  externalId  String?  @unique
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user         User?
+  deals       Deal[]
+  calls       Call[]
+  dealStageHistory DealStageHistory[]
+  dailyMetrics DailyMetrics[]
+  dailyReports DailyReport[]
+  dailyPlanNotes DailyPlanNote[]
+  monthlyPlans ManagerMonthlyPlan[]
+  aiInsights  AIInsight[]
+}
+
+model TenantConfig {
+  id                 String   @id @default(uuid())
+  timezone           String   @default("UTC")
+  webhookSecret      String
+  funnelStageMapping Json
+  managerMapping     Json
+  planDefaults       Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model DailyPlanNote {
+  id        String   @id @default(uuid())
+  managerId String
+  manager   Manager  @relation(fields: [managerId], references: [id])
+  date      DateTime @db.Date
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([managerId, date])
+}
+
+model DailyReport {
+  id             String   @id @default(uuid())
+  managerId       String
+  manager         Manager  @relation(fields: [managerId], references: [id])
+  date            DateTime @db.Date
+  callsTotal      Int      @default(0)
+  callsTarget     Int      @default(0)
+  dealsCount      Int      @default(0)
+  contractsCount  Int      @default(0)
+  invoicesCount   Int      @default(0)
+  invoicesAmount  Decimal  @default(0.0) @db.Decimal(12, 2)
+  paymentsCount   Int      @default(0)
+  margin          Decimal  @default(0.0) @db.Decimal(12, 2)
+  comment         String   @default("") @db.Text
+  submittedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([managerId, date])
+  @@index([date])
+}
+
+model ManagerMonthlyPlan {
+  id        String   @id @default(uuid())
+  managerId String
+  manager   Manager  @relation(fields: [managerId], references: [id])
+  month     String
+  plan      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([managerId, month])
+  @@index([month])
+}
+
+model EventLog {
+  id         String   @id @default(uuid())
+  eventKey   String   @unique
+  eventType  String
+  externalId String
+  payload    Json
+  receivedAt DateTime @default(now())
+  processedAt DateTime?
+}
+
+model RevokedAccessToken {
+  tokenHash String   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Deal {
+  id         String   @id @default(uuid())
+  externalId String   @unique
+  title      String?
+  amount     Decimal? @db.Decimal(12, 2)
+  currency   String?
+  stageKey   String
+  stageRaw   String?
+  status     String?
+  managerId  String?
+  manager    Manager? @relation(fields: [managerId], references: [id])
+  stageHistory DealStageHistory[]
+  calls      Call[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  closedAt   DateTime?
+}
+
+model DealStageHistory {
+  id        String   @id @default(uuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  managerId String?
+  manager   Manager? @relation(fields: [managerId], references: [id])
+  stageKey  String
+  stageRaw  String?
+  amount    Decimal? @db.Decimal(12, 2)
+  changedAt DateTime
+
+  @@index([changedAt])
+}
+
+model DailyMetrics {
+  id             String       @id @default(uuid())
+  date           DateTime     @db.Date
+  scope          MetricsScope @default(TEAM)
+  managerKey     String
+  managerId      String?
+  manager        Manager?     @relation(fields: [managerId], references: [id])
+  callsTotal     Int          @default(0)
+  callsTarget    Int          @default(0)
+  dealsCount     Int          @default(0)
+  contractsCount Int          @default(0)
+  invoicesCount  Int          @default(0)
+  invoicesAmount Decimal      @default(0.0) @db.Decimal(12, 2)
+  paymentsCount  Int          @default(0)
+  margin         Decimal      @default(0.0) @db.Decimal(12, 2)
+  avgCheck       Decimal      @default(0.0) @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([date, managerKey])
+  @@index([date])
+}
+
+model Call {
+  id                String               @id @default(uuid())
+  externalId        String               @unique
+  managerId         String?
+  manager           Manager?             @relation(fields: [managerId], references: [id])
+  dealId            String?
+  deal              Deal?                @relation(fields: [dealId], references: [id])
+  occurredAt        DateTime
+  durationSec       Int?
+  recordingUrl      String?
+  recordingProvider String?
+  processingStatus  CallProcessingStatus @default(NEW)
+  processingAttempts Int               @default(0)
+  queueJobId        String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  transcript        CallTranscript?
+  aiInsights        AIInsight[]
+}
+
+model CallTranscript {
+  id          String   @id @default(uuid())
+  callId      String   @unique
+  call        Call     @relation(fields: [callId], references: [id])
+  provider    String
+  model       String?
+  text        String   @db.Text
+  rawResponse Json?
+  createdAt   DateTime @default(now())
+}
+
+model AIInsight {
+  id                String       @id @default(uuid())
+  scope             InsightScope
+  type              InsightType
+  title             String
+  summary           String       @db.Text
+  why               String       @db.Text
+  recommendedActions Json
+  promptVersion     String?
+  provider          String?
+  model             String?
+  rawResponse       Json?
+  impactEstimate    Decimal?     @db.Decimal(12, 2)
+  confidence        Float?
+  relatedManagerIds Json?
+  relatedMetrics    Json?
+  managerId         String?
+  manager           Manager?     @relation(fields: [managerId], references: [id])
+  callId            String?
+  call              Call?        @relation(fields: [callId], references: [id])
+  createdAt         DateTime     @default(now())
+
+  @@index([scope])
+  @@unique([callId, type])
+}
