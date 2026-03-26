@@ -1,5 +1,4 @@
--- CreateTable
-CREATE TABLE "DailyReport" (
+CREATE TABLE IF NOT EXISTS "DailyReport" (
     "id" TEXT NOT NULL,
     "managerId" TEXT NOT NULL,
     "date" DATE NOT NULL,
@@ -18,21 +17,70 @@ CREATE TABLE "DailyReport" (
     CONSTRAINT "DailyReport_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "DailyReport_managerId_date_key" ON "DailyReport"("managerId", "date");
+CREATE UNIQUE INDEX IF NOT EXISTS "DailyReport_managerId_date_key" ON "DailyReport"("managerId", "date");
+CREATE INDEX IF NOT EXISTS "DailyReport_date_idx" ON "DailyReport"("date");
 
--- CreateIndex
-CREATE INDEX "DailyReport_date_idx" ON "DailyReport"("date");
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_managerId_fkey') THEN
+    ALTER TABLE "DailyReport"
+      ADD CONSTRAINT "DailyReport_managerId_fkey"
+      FOREIGN KEY ("managerId") REFERENCES "Manager"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END $$;
 
--- AddForeignKey
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "Manager"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_callsTotal_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_callsTotal_nonnegative" CHECK ("callsTotal" >= 0);
+  END IF;
+END $$;
 
--- AddCheckConstraints
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_callsTotal_nonnegative" CHECK ("callsTotal" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_callsTarget_nonnegative" CHECK ("callsTarget" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_dealsCount_nonnegative" CHECK ("dealsCount" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_contractsCount_nonnegative" CHECK ("contractsCount" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_invoicesCount_nonnegative" CHECK ("invoicesCount" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_invoicesAmount_nonnegative" CHECK ("invoicesAmount" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_paymentsCount_nonnegative" CHECK ("paymentsCount" >= 0);
-ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_margin_nonnegative" CHECK ("margin" >= 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_callsTarget_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_callsTarget_nonnegative" CHECK ("callsTarget" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_dealsCount_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_dealsCount_nonnegative" CHECK ("dealsCount" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_contractsCount_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_contractsCount_nonnegative" CHECK ("contractsCount" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_invoicesCount_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_invoicesCount_nonnegative" CHECK ("invoicesCount" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_invoicesAmount_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_invoicesAmount_nonnegative" CHECK ("invoicesAmount" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_paymentsCount_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_paymentsCount_nonnegative" CHECK ("paymentsCount" >= 0);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'DailyReport_margin_nonnegative') THEN
+    ALTER TABLE "DailyReport" ADD CONSTRAINT "DailyReport_margin_nonnegative" CHECK ("margin" >= 0);
+  END IF;
+END $$;

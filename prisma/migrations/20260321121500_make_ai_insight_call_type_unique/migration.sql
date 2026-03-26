@@ -15,4 +15,4 @@ WHERE id IN (
   WHERE row_number > 1
 );
 
-CREATE UNIQUE INDEX "AIInsight_callId_type_key" ON "AIInsight"("callId", "type");
+CREATE UNIQUE INDEX IF NOT EXISTS "AIInsight_callId_type_key" ON "AIInsight"("callId", "type");
