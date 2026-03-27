@@ -553,7 +553,11 @@ export class ManagersService {
     }
 
     const message = error instanceof Error ? error.message : 'Unknown error'
-    this.logger.error({ msg: 'Unexpected error in admin team write', error: message })
+    try {
+      this.logger?.error?.({ msg: 'Unexpected error in admin team write', error: message })
+    } catch {
+      // Never let logging hide the original write error.
+    }
     return new InternalServerErrorException('Failed to create/update manager: ' + message)
   }
 

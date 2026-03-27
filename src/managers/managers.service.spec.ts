@@ -327,6 +327,24 @@ describe('ManagersService admin team CRUD', () => {
     })
   })
 
+  it('still exposes the original write error when logger is unavailable', async () => {
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(new Error('db write failed')),
+    } as any
+
+    const service = new ManagersService(prisma, {} as any, undefined as any)
+
+    await expect(
+      service.createAdminTeamMember({
+        name: 'Alice',
+        user: {
+          email: 'alice@example.com',
+          password: 'temp-pass',
+        },
+      }),
+    ).rejects.toThrow(new InternalServerErrorException('Failed to create/update manager: db write failed'))
+  })
+
   it('returns effective monthly plan for admin editing with manager override priority', async () => {
     const prisma = {
       manager: {
