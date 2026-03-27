@@ -62,6 +62,14 @@ export const buildEffectivePlan = (tenantDefaults: unknown, personalPlan?: unkno
     ...normalizePlanRecord(personalPlan),
   })
 
+export const pickPlanPayload = (plan: PlanDefaults): PlanDefaults => {
+  const result: PlanDefaults = {}
+  for (const key of MANAGER_MONTHLY_PLAN_KEYS) {
+    result[key] = plan[key] ?? 0
+  }
+  return result
+}
+
 export const aggregateManagerPlans = (plans: PlanDefaults[], tenantDefaults: PlanDefaults) => {
   const aggregated = normalizePlanDefaults({ ...tenantDefaults })
 

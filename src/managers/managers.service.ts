@@ -1,9 +1,9 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { normalizeUserRole, toUserRole } from '@shared/roles'
 import bcrypt from 'bcryptjs'
 import { PrismaService } from '../prisma/prisma.service'
 import { TenantConfigService } from '../config/tenant-config.service'
-import { buildEffectivePlan, buildSalesMetrics, MetricsTotals, normalizePlanDefaults } from '../metrics/metrics.utils'
+import { buildEffectivePlan, buildSalesMetrics, MetricsTotals, normalizePlanDefaults, pickPlanPayload } from '../metrics/metrics.utils'
 import { AppLogger } from '../logger/logger.service'
 import { buildManagerAiTip, normalizeInsightRecord, type NormalizedAIInsight } from '../ai/insights.utils'
 
@@ -215,7 +215,7 @@ export class ManagersService {
       managerId: id,
       month,
       source: personalPlan ? 'manager' : 'tenant_default',
-      effectivePlan: buildEffectivePlan(defaults, personalPlan?.plan),
+      effectivePlan: pickPlanPayload(buildEffectivePlan(defaults, personalPlan?.plan)),
     }
   }
 
@@ -248,7 +248,7 @@ export class ManagersService {
       managerId: id,
       month,
       source: 'manager' as const,
-      effectivePlan: buildEffectivePlan(defaults, plan),
+      effectivePlan: pickPlanPayload(buildEffectivePlan(defaults, plan)),
     }
   }
 
@@ -529,7 +529,12 @@ export class ManagersService {
   }
 
   private mapAdminTeamWriteError(error: unknown) {
-    if (error instanceof BadRequestException || error instanceof NotFoundException) {
+    if (
+      error instanceof BadRequestException ||
+      error instanceof NotFoundException ||
+      error instanceof ConflictException ||
+      error instanceof InternalServerErrorException
+    ) {
       return error
     }
 
@@ -547,7 +552,9 @@ export class ManagersService {
       return new ConflictException('Manager or linked user already exists')
     }
 
-    return error instanceof Error ? error : new Error('Failed to write manager data')
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    this.logger.error({ msg: 'Unexpected error in admin team write', error: message })
+    return new InternalServerErrorException('Failed to create/update manager: ' + message)
   }
 
   private isUniqueConstraintError(

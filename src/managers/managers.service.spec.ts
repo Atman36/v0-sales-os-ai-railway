@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common'
+import { BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common'
 import bcrypt from 'bcryptjs'
 import { ManagersService } from './managers.service'
 
@@ -303,6 +303,30 @@ describe('ManagersService admin team CRUD', () => {
     ).rejects.toThrow(ConflictException)
   })
 
+  it('wraps unexpected manager write errors and logs the original message', async () => {
+    const logger = createLogger()
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(new Error('relation "User" does not exist')),
+    } as any
+
+    const service = new ManagersService(prisma, {} as any, logger)
+
+    await expect(
+      service.createAdminTeamMember({
+        name: 'Alice',
+        user: {
+          email: 'alice@example.com',
+          password: 'temp-pass',
+        },
+      }),
+    ).rejects.toThrow(new InternalServerErrorException('Failed to create/update manager: relation "User" does not exist'))
+
+    expect(logger.error).toHaveBeenCalledWith({
+      msg: 'Unexpected error in admin team write',
+      error: 'relation "User" does not exist',
+    })
+  })
+
   it('returns effective monthly plan for admin editing with manager override priority', async () => {
     const prisma = {
       manager: {
@@ -342,10 +366,69 @@ describe('ManagersService admin team CRUD', () => {
       source: 'manager',
       effectivePlan: {
         calls_total: 70,
+        calls_target: 0,
         deals_count: 12,
+        contracts_count: 0,
+        invoices_count: 0,
+        invoices_amount_rub: 0,
+        payments_count: 0,
         margin_rub: 250000,
+        avg_check_rub: 0,
       },
     })
+  })
+
+  it('strips legacy alias keys from admin monthly plan effective payload', async () => {
+    const prisma = {
+      manager: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'manager-1',
+          name: 'Alice',
+        }),
+      },
+      managerMonthlyPlan: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+    } as any
+
+    const configService = {
+      getConfig: jest.fn().mockResolvedValue({
+        planDefaults: {
+          calls_total: 60,
+          margin: 180000,
+          invoices: 3,
+          payments: 2,
+          avgCheck: 50000,
+          invoices_amount: 210000,
+        },
+      }),
+    } as any
+
+    const service = new ManagersService(prisma, configService, createLogger())
+    const result = await service.getAdminManagerMonthlyPlan('manager-1', '2026-03')
+
+    expect(result).toEqual({
+      managerId: 'manager-1',
+      month: '2026-03',
+      source: 'tenant_default',
+      effectivePlan: {
+        calls_total: 60,
+        calls_target: 0,
+        deals_count: 0,
+        contracts_count: 0,
+        invoices_count: 3,
+        invoices_amount_rub: 210000,
+        payments_count: 2,
+        margin_rub: 180000,
+        avg_check_rub: 50000,
+      },
+    })
+
+    expect(result.effectivePlan).not.toHaveProperty('margin')
+    expect(result.effectivePlan).not.toHaveProperty('invoices')
+    expect(result.effectivePlan).not.toHaveProperty('payments')
+    expect(result.effectivePlan).not.toHaveProperty('avgCheck')
+    expect(result.effectivePlan).not.toHaveProperty('invoices_amount')
   })
 
   it('upserts personal monthly plan for manager', async () => {
