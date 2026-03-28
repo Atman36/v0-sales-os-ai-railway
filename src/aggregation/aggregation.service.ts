@@ -179,6 +179,7 @@ export class AggregationService {
     const todayDate = this.dateKeyToUtc(todayKey)
     const yesterday = new Date(todayDate)
     yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+    await this.recomputeForDate(todayDate)
     await this.recomputeForDate(yesterday)
   }
 
@@ -193,7 +194,7 @@ export class AggregationService {
     const getCount = (key: string) => stages.get(key)?.count ?? 0
     const getAmount = (key: string) => stages.get(key)?.amount ?? 0
 
-    const callsTarget = getCount('TARGETED') || callsTotal
+    const callsTarget = stages.has('TARGETED') ? getCount('TARGETED') : callsTotal
     const dealsCount = getCount('DEALS')
     const contractsCount = getCount('CONTRACTS')
     const invoicesCount = getCount('INVOICES')

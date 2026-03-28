@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
 import { Inject, Injectable } from '@nestjs/common'
+import { Cron } from '@nestjs/schedule'
 import { TOKEN_REVOCATION_STORE, type TokenRevocationStore } from './token-revocation.store'
 
 const DEFAULT_REVOCATION_TTL_MS = 12 * 60 * 60 * 1000
@@ -42,6 +43,11 @@ export class TokenRevocationService {
 
   async cleanup(now = Date.now()) {
     await this.tokenRevocationStore.cleanup(now)
+  }
+
+  @Cron('0 3 * * *')
+  async scheduledCleanup() {
+    await this.cleanup()
   }
 
   private resolveExpiresAt(token: string, now: number) {

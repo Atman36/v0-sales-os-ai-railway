@@ -558,7 +558,7 @@ export class ManagersService {
     } catch {
       // Never let logging hide the original write error.
     }
-    return new InternalServerErrorException('Failed to create/update manager: ' + message)
+    return new InternalServerErrorException('Failed to create/update manager')
   }
 
   private isUniqueConstraintError(
