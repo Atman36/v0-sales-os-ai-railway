@@ -87,6 +87,7 @@ describe('MeService', () => {
 
     const configService = {
       getConfig: jest.fn().mockResolvedValue({
+        timezone: 'Asia/Yekaterinburg',
         planDefaults: {
           calls_total: 40,
           deals_count: 8,
@@ -166,9 +167,39 @@ describe('MeService', () => {
         margin_rub: 120000,
         calls_total: 40,
       },
+      timezone: 'Asia/Yekaterinburg',
     })
 
     expect(result.recentReports).toHaveLength(2)
+  })
+
+  it('falls back to UTC timezone in /me/summary when tenant config does not define one', async () => {
+    const prisma = {
+      manager: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'manager-1',
+          name: 'Alice',
+          avatarUrl: null,
+        }),
+      },
+      dailyMetrics: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      dailyReport: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    } as any
+
+    const configService = {
+      getConfig: jest.fn().mockResolvedValue({
+        planDefaults: {},
+      }),
+    } as any
+
+    const service = new MeService(prisma, configService)
+    const result = await service.getSummary('manager-1')
+
+    expect(result.timezone).toBe('UTC')
   })
 
   it('builds /me/plan for a requested month and returns month daily metrics with today report when it matches the month', async () => {

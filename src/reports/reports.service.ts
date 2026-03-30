@@ -33,6 +33,8 @@ type DailyReportRecord = {
   updatedAt: Date
 }
 
+type DailyReportSaveOutcome = 'report_saved_metrics_synced' | 'report_saved_only'
+
 @Injectable()
 export class ReportsService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -89,9 +91,17 @@ export class ReportsService {
     if (canManualReportsWriteDailyMetrics()) {
       await this.syncManagerMetrics(managerId, reportDate, payload)
       await this.syncTeamMetrics(reportDate)
+
+      return {
+        report: this.mapReport(report),
+        outcome: 'report_saved_metrics_synced' as DailyReportSaveOutcome,
+      }
     }
 
-    return this.mapReport(report)
+    return {
+      report: this.mapReport(report),
+      outcome: 'report_saved_only' as DailyReportSaveOutcome,
+    }
   }
 
   private async syncManagerMetrics(managerId: string, date: Date, payload: DailyReportPayload) {

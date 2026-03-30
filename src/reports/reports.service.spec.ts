@@ -183,20 +183,23 @@ describe('ReportsService', () => {
     })
 
     expect(result).toEqual({
-      id: 'report-1',
-      managerId: 'manager-1',
-      date: '2026-03-19',
-      calls_total: 12,
-      calls_target: 7,
-      deals_count: 3,
-      contracts_count: 2,
-      invoices_count: 2,
-      invoices_amount_rub: 150000,
-      payments_count: 1,
-      margin_rub: 45000,
-      comment: 'Closed strong',
-      submittedAt: '2026-03-19T12:34:56.000Z',
-      updatedAt: '2026-03-19T12:34:56.000Z',
+      report: {
+        id: 'report-1',
+        managerId: 'manager-1',
+        date: '2026-03-19',
+        calls_total: 12,
+        calls_target: 7,
+        deals_count: 3,
+        contracts_count: 2,
+        invoices_count: 2,
+        invoices_amount_rub: 150000,
+        payments_count: 1,
+        margin_rub: 45000,
+        comment: 'Closed strong',
+        submittedAt: '2026-03-19T12:34:56.000Z',
+        updatedAt: '2026-03-19T12:34:56.000Z',
+      },
+      outcome: 'report_saved_metrics_synced',
     })
   })
 
@@ -327,16 +330,24 @@ describe('ReportsService', () => {
     } as any
 
     const service = new ReportsService(prisma)
-    await service.upsertMyReport('manager-1', '2026-03-19', {
-      calls_total: 12,
-      calls_target: 7,
-      deals_count: 3,
-      contracts_count: 2,
-      invoices_count: 2,
-      invoices_amount_rub: 150000,
-      payments_count: 1,
-      margin_rub: 45000,
-      comment: 'Closed strong',
+    await expect(
+      service.upsertMyReport('manager-1', '2026-03-19', {
+        calls_total: 12,
+        calls_target: 7,
+        deals_count: 3,
+        contracts_count: 2,
+        invoices_count: 2,
+        invoices_amount_rub: 150000,
+        payments_count: 1,
+        margin_rub: 45000,
+        comment: 'Closed strong',
+      }),
+    ).resolves.toMatchObject({
+      report: {
+        id: 'report-1',
+        date: '2026-03-19',
+      },
+      outcome: 'report_saved_only',
     })
 
     expect(prisma.dailyReport.upsert).toHaveBeenCalled()

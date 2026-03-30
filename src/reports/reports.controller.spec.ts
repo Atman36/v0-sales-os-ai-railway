@@ -22,7 +22,10 @@ describe('ReportsController', () => {
 
   it('upserts the current manager report', async () => {
     const service = {
-      upsertMyReport: jest.fn().mockResolvedValue({ id: 'report-1' }),
+      upsertMyReport: jest.fn().mockResolvedValue({
+        report: { id: 'report-1' },
+        outcome: 'report_saved_metrics_synced',
+      }),
     } as any
 
     const controller = new ReportsController(service)
@@ -38,7 +41,10 @@ describe('ReportsController', () => {
       comment: 'ok',
     }
 
-    await controller.upsertMyReport('2026-03-19', payload, currentUser)
+    await expect(controller.upsertMyReport('2026-03-19', payload, currentUser)).resolves.toMatchObject({
+      report: { id: 'report-1' },
+      outcome: 'report_saved_metrics_synced',
+    })
 
     expect(service.upsertMyReport).toHaveBeenCalledWith('manager-1', '2026-03-19', payload)
   })

@@ -73,6 +73,7 @@ export class MeService {
       todayReport: todayReport ? this.mapReport(todayReport) : null,
       recentReports: recentReports.map((report) => this.mapReport(report)),
       plan: context.plan,
+      timezone: context.timezone,
     }
   }
 
@@ -91,6 +92,7 @@ export class MeService {
   }
 
   private async getMonthContext(managerId: string, monthValue: string) {
+    const config = await this.configService.getConfig()
     const manager = await this.prisma.manager.findUnique({
       where: { id: managerId },
       select: {
@@ -105,7 +107,7 @@ export class MeService {
     }
 
     const month = this.parseMonth(monthValue)
-    const plan = await this.getEffectivePlan(managerId, month.value)
+    const plan = await this.getEffectivePlan(managerId, month.value, config.planDefaults ?? {})
     const dailyMetrics = await this.prisma.dailyMetrics.findMany({
       where: {
         managerId,
@@ -153,6 +155,7 @@ export class MeService {
         name: manager.name,
         avatarUrl: manager.avatarUrl ?? undefined,
       },
+      timezone: config.timezone || 'UTC',
       month,
       plan,
       monthMetrics: buildSalesMetrics(totals, plan),
@@ -160,8 +163,7 @@ export class MeService {
     }
   }
 
-  private async getEffectivePlan(managerId: string, monthValue: string) {
-    const config = await this.configService.getConfig()
+  private async getEffectivePlan(managerId: string, monthValue: string, planDefaults: unknown) {
     const monthlyPlan = this.prisma.managerMonthlyPlan
       ? await this.prisma.managerMonthlyPlan.findUnique({
           where: {
@@ -173,7 +175,7 @@ export class MeService {
         })
       : null
 
-    return buildEffectivePlan(config.planDefaults ?? {}, monthlyPlan?.plan)
+    return buildEffectivePlan(planDefaults, monthlyPlan?.plan)
   }
 
   private async getTodayReportForMonth(managerId: string, monthValue: string) {

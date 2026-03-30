@@ -270,6 +270,17 @@ export const DailyReportSchema = z.object({
 })
 export type DailyReport = z.infer<typeof DailyReportSchema>
 
+export const DailyReportSaveOutcomeSchema = z.enum(['report_saved_metrics_synced', 'report_saved_only'])
+export type DailyReportSaveOutcome = z.infer<typeof DailyReportSaveOutcomeSchema>
+
+export const DailyReportSaveResponseSchema = z
+  .object({
+    report: DailyReportSchema,
+    outcome: DailyReportSaveOutcomeSchema,
+  })
+  .strict()
+export type DailyReportSaveResponse = z.infer<typeof DailyReportSaveResponseSchema>
+
 export const DailyReportUpsertSchema = z
   .object({
     calls_total: CountMetricSchema,
@@ -326,6 +337,7 @@ export const MeSummarySchema = z.object({
   todayReport: DailyReportSchema.nullable(),
   recentReports: z.array(DailyReportSchema),
   plan: EffectivePlanSchema,
+  timezone: z.string(),
 })
 export type MeSummary = z.infer<typeof MeSummarySchema>
 
