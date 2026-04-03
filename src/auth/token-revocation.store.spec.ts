@@ -1,7 +1,6 @@
 import {
   InMemoryTokenRevocationStore,
   PrismaTokenRevocationStore,
-  resolveTokenRevocationBackend,
   type TokenRevocationStore,
 } from './token-revocation.store'
 
@@ -120,25 +119,5 @@ describe('PrismaTokenRevocationStore', () => {
 
     await expect(readerStore.isRevoked('hash-1', now + 1_000)).resolves.toBe(true)
     await expect(readerStore.isRevoked('hash-1', now + 61_000)).resolves.toBe(false)
-  })
-})
-
-describe('resolveTokenRevocationBackend', () => {
-  it('defaults to memory when the backend is unset', () => {
-    expect(resolveTokenRevocationBackend(undefined)).toBe('memory')
-  })
-
-  it('accepts the in-memory backend explicitly', () => {
-    expect(resolveTokenRevocationBackend(' memory ')).toBe('memory')
-  })
-
-  it('accepts the database backend for deployment environments', () => {
-    expect(resolveTokenRevocationBackend(' database ')).toBe('database')
-  })
-
-  it('rejects unsupported backends', () => {
-    expect(() => resolveTokenRevocationBackend('redis')).toThrow(
-      'Unsupported AUTH_TOKEN_REVOCATION_BACKEND: "redis". Supported backends: memory, database.',
-    )
   })
 })

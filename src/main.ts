@@ -5,6 +5,7 @@ import { AppModule } from './app.module'
 import { AppLogger } from './logger/logger.service'
 import { createCorsOptions } from './cors.config'
 import { assertDailyMetricsSourceOfTruthConfigured } from './metrics/daily-metrics-source-of-truth'
+import { assertTokenRevocationBackendConfigured } from './auth/token-revocation.config'
 
 async function bootstrap() {
   assertDailyMetricsSourceOfTruthConfigured()
@@ -15,6 +16,10 @@ async function bootstrap() {
   app.enableShutdownHooks()
 
   const config = app.get(ConfigService)
+  assertTokenRevocationBackendConfigured(
+    config.get<string>('AUTH_TOKEN_REVOCATION_BACKEND'),
+    config.get<string>('NODE_ENV'),
+  )
   const port = Number(config.get('API_PORT') ?? 4000)
 
   await app.listen(port)

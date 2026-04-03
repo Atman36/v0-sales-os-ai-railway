@@ -8,7 +8,7 @@ import { AuthService } from './auth.service'
 import { JwtStrategy } from './jwt.strategy'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { RolesGuard } from './roles.guard'
-import { requireJwtSecret } from './jwt-config'
+import { createJwtModuleOptions } from './jwt-config'
 import { TenantConfigModule } from '../config/tenant-config.module'
 import { MeService } from './me.service'
 import { TokenRevocationService } from './token-revocation.service'
@@ -17,8 +17,8 @@ import {
   PrismaTokenRevocationStore,
   TOKEN_REVOCATION_STORE,
   type TokenRevocationStore,
-  resolveTokenRevocationBackend,
 } from './token-revocation.store'
+import { resolveTokenRevocationBackend } from './token-revocation.config'
 
 function assertUnsupportedTokenRevocationBackend(backend: never): never {
   throw new Error(`Unsupported token revocation backend: ${String(backend)}`)
@@ -32,10 +32,11 @@ function assertUnsupportedTokenRevocationBackend(backend: never): never {
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: requireJwtSecret(config.get<string>('JWT_SECRET')),
-        signOptions: { expiresIn: '12h' },
-      }),
+      useFactory: (config: ConfigService) =>
+        createJwtModuleOptions(
+          config.get<string>('JWT_SECRET'),
+          config.get<string>('NODE_ENV'),
+        ),
     }),
   ],
   controllers: [AuthController, MeController],
@@ -58,6 +59,7 @@ function assertUnsupportedTokenRevocationBackend(backend: never): never {
       ): TokenRevocationStore => {
         const backend = resolveTokenRevocationBackend(
           config.get<string>('AUTH_TOKEN_REVOCATION_BACKEND'),
+          config.get<string>('NODE_ENV'),
         )
 
         if (backend === 'memory') {

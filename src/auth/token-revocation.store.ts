@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import type { TokenRevocationBackend } from './token-revocation.config'
 
 export const TOKEN_REVOCATION_STORE = Symbol('TOKEN_REVOCATION_STORE')
-
-export type TokenRevocationBackend = 'memory' | 'database'
 
 type Awaitable<T> = T | Promise<T>
 
@@ -11,26 +10,6 @@ export interface TokenRevocationStore {
   revoke(tokenHash: string, expiresAt: number, now?: number): Awaitable<void>
   isRevoked(tokenHash: string, now?: number): Awaitable<boolean>
   cleanup(now?: number): Awaitable<void>
-}
-
-export function resolveTokenRevocationBackend(value?: string | null): TokenRevocationBackend {
-  const normalizedValue = value?.trim().toLowerCase()
-
-  if (!normalizedValue || normalizedValue === 'memory') {
-    return 'memory'
-  }
-
-  if (
-    normalizedValue === 'database' ||
-    normalizedValue === 'db' ||
-    normalizedValue === 'prisma'
-  ) {
-    return 'database'
-  }
-
-  throw new Error(
-    `Unsupported AUTH_TOKEN_REVOCATION_BACKEND: "${value}". Supported backends: memory, database.`,
-  )
 }
 
 @Injectable()

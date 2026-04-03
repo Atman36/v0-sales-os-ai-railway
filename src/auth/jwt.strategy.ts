@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import type { Request } from 'express'
-import { requireJwtSecret } from './jwt-config'
+import { createJwtStrategyOptions } from './jwt-config'
 import { TokenRevocationService } from './token-revocation.service'
 
 @Injectable()
@@ -13,12 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @Inject(TokenRevocationService)
     private readonly tokenRevocationService: TokenRevocationService,
   ) {
-    super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      secretOrKey: requireJwtSecret(config.get<string>('JWT_SECRET')),
-      passReqToCallback: true,
-    })
+    super(createJwtStrategyOptions(config.get<string>('JWT_SECRET'), config.get<string>('NODE_ENV')))
   }
 
   async validate(
