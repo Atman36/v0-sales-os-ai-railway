@@ -1,0 +1,23 @@
+{
+  "admin": {
+    "email": "admin@salesos.ai",
+    "password": "admin123",
+    "name": "Admin"
+  },
+  "tenantTimezone": "UTC",
+  "demoManagerPassword": "manager123",
+  "demoManagers": [
+    {
+      "name": "Алексей Петров",
+      "externalId": "mgr-001"
+    },
+    {
+      "name": "Мария Иванова",
+      "externalId": "mgr-002"
+    },
+    {
+      "name": "Дмитрий Козлов",
+      "externalId": "mgr-003"
+    }
+  ]
+}

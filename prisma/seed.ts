@@ -1,14 +1,13 @@
 import { PrismaClient } from '@prisma/client'
-import { DEFAULT_INSECURE_SECRET, isDefaultSecret, isSafeEnv, normalizeSecret, resolveNodeEnv } from '@shared/runtime-env'
 import bcrypt from 'bcryptjs'
+import { assertSeedExecutionAllowed, requireSeedWebhookSecret, resolveSeedConfig } from './seed-runtime'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@salesos.ai'
-  const adminPassword = process.env.ADMIN_PASSWORD ?? 'admin123'
-  const adminName = process.env.ADMIN_NAME ?? 'Admin'
-  const timezone = process.env.TENANT_TIMEZONE ?? 'UTC'
+  assertSeedExecutionAllowed()
+
+  const { adminEmail, adminPassword, adminName, timezone, demoManagers, demoManagerPassword } = resolveSeedConfig()
   const webhookSecret = requireSeedWebhookSecret()
 
   const passwordHash = await bcrypt.hash(adminPassword, 10)
@@ -54,12 +53,6 @@ async function main() {
 
   // Demo manager accounts (only seeded if SEED_DEMO_MANAGERS=true)
   if (process.env.SEED_DEMO_MANAGERS === 'true') {
-    const demoManagers = [
-      { name: 'Алексей Петров', externalId: 'mgr-001' },
-      { name: 'Мария Иванова', externalId: 'mgr-002' },
-      { name: 'Дмитрий Козлов', externalId: 'mgr-003' },
-    ]
-
     for (const mgr of demoManagers) {
       const manager = await prisma.manager.upsert({
         where: { externalId: mgr.externalId },
@@ -68,7 +61,7 @@ async function main() {
       })
 
       const userEmail = `${mgr.externalId}@salesos.ai`
-      const userPasswordHash = await bcrypt.hash('manager123', 10)
+      const userPasswordHash = await bcrypt.hash(demoManagerPassword, 10)
 
       // Create user without managerId first (to avoid unique conflict on upsert)
       const existingUser = await prisma.user.findUnique({ where: { email: userEmail } })
@@ -90,24 +83,6 @@ async function main() {
       }
     }
   }
-}
-
-function requireSeedWebhookSecret() {
-  const nodeEnv = resolveNodeEnv(process.env.NODE_ENV)
-  const secret = normalizeSecret(process.env.SALESOS_WEBHOOK_SECRET)
-
-  if (secret) {
-    if (!isSafeEnv(nodeEnv) && isDefaultSecret(secret)) {
-      throw new Error(`SALESOS_WEBHOOK_SECRET must be changed outside development/test (NODE_ENV=${nodeEnv})`)
-    }
-    return secret
-  }
-
-  if (isSafeEnv(nodeEnv)) {
-    return DEFAULT_INSECURE_SECRET
-  }
-
-  throw new Error(`SALESOS_WEBHOOK_SECRET is required outside development/test (NODE_ENV=${nodeEnv})`)
 }
 
 main()

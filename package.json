@@ -5,11 +5,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/src/main.js",
-    "start:prod": "npx prisma migrate deploy && npx tsx prisma/seed.ts && node dist/src/main.js",
+    "start:prod": "npx prisma migrate deploy && node dist/src/main.js",
     "dev": "tsx watch src/main.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "bootstrap:seed": "ALLOW_SEED_IN_UNSAFE_ENV=true tsx prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.7",
